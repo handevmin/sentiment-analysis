@@ -1,0 +1,12 @@
+{
+  "n_sessions": 3422,
+  "n_turns": 7991,
+  "avg_turns_per_session": 2.3,
+  "avg_satisfaction": 7.63,
+  "avg_duration_sec": 1363.0,
+  "model_name_ratio": 0.075,
+  "avg_q_length": 17.8,
+  "avg_a_length": 447.7,
+  "voice_empathy": 0.277,
+  "chat_empathy": 0.449
+}
