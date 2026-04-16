@@ -1065,10 +1065,10 @@ def generate_figures():
     ax1.set_facecolor("#FAFAFA")
     ax1.plot(x_bins, pos_traj, color="#2E7D32", linewidth=2.5, marker="o",
              markersize=10, markerfacecolor="#2E7D32", markeredgecolor=WHITE,
-             markeredgewidth=2, label="긍정 종료 (N=327)", zorder=5)
+             markeredgewidth=2, label="긍정 종료 (N=327, 47.7%)", zorder=5)
     ax1.plot(x_bins, neg_traj, color="#C62828", linewidth=2.5, marker="s",
              markersize=10, markerfacecolor="#C62828", markeredgecolor=WHITE,
-             markeredgewidth=2, label="부정 종료 (N=96)", zorder=5)
+             markeredgewidth=2, label="부정 종료 (N=96, 14.0%)", zorder=5)
     ax1.fill_between(x_bins, pos_traj, neg_traj, alpha=0.06, color=ORANGE)
 
     for xi, (pv, nv) in enumerate(zip(pos_traj, neg_traj)):
@@ -1232,6 +1232,223 @@ def generate_figures():
     plt.close(fig)
     figs["fig19"] = path
     print(f"  [fig19] 제품군별 궤적 저장")
+
+    # ─── fig20: 감정 그룹별 구성 변화 (Stacked Area) — 전체 ──────────────────
+    grp_names  = ["감사/만족", "안정/중립", "불안/걱정", "불만/짜증", "혼란/당황"]
+    grp_colors_list = ["#5B9A6B", "#6B8EB5", "#D4A84B", "#B56B6B", "#8B7BAA"]
+    grp_color_map = dict(zip(grp_names, grp_colors_list))
+
+    all_ratios = {
+        "감사/만족": [14.9, 11.5, 10.4, 12.7, 14.4, 16.1, 15.8, 16.5, 23.0, 41.1],
+        "안정/중립": [37.8, 37.5, 39.5, 36.3, 34.3, 32.8, 33.3, 30.2, 30.4, 33.1],
+        "불안/걱정": [22.0, 19.0, 22.4, 21.3, 19.9, 21.0, 24.0, 23.9, 20.6, 11.6],
+        "불만/짜증": [10.5, 18.2, 14.0, 17.3, 17.4, 17.5, 12.3, 14.2, 12.4,  8.6],
+        "혼란/당황": [14.6, 13.7, 13.8, 12.3, 14.0, 12.5, 14.4, 15.2, 13.7,  5.5],
+    }
+
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    fig.patch.set_facecolor(WHITE)
+    ax.set_facecolor("#FAFAFA")
+    x_area = np.arange(10)
+    bottom = np.zeros(10)
+    for gname, gcol in zip(grp_names, grp_colors_list):
+        vals = np.array(all_ratios[gname])
+        ax.fill_between(x_area, bottom, bottom + vals, color=gcol, alpha=0.75, label=gname)
+        mid = bottom + vals / 2
+        for xi in [0, 4, 9]:
+            if vals[xi] >= 8:
+                ax.text(xi, mid[xi], f"{vals[xi]:.0f}%", ha="center", va="center",
+                        fontsize=7.5, fontweight="bold", color="white")
+        bottom += vals
+    ax.set_xticks(x_area)
+    ax.set_xticklabels([f"{i*10}%" for i in range(10)], fontsize=9)
+    ax.set_ylabel("비율 (%)", fontsize=10, color="#555555")
+    ax.set_title("상담 진행에 따른 감정 그룹 구성 변화 (전체)",
+                 fontsize=13, fontweight="bold", color="#222222", pad=12)
+    ax.set_ylim(0, 100)
+    ax.set_xlim(-0.3, 9.3)
+    ax.legend(fontsize=9, framealpha=0.9, loc="upper right", ncol=5,
+              bbox_to_anchor=(1, -0.08), borderaxespad=0)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color(LIGHT_GRAY)
+    ax.spines["bottom"].set_color(LIGHT_GRAY)
+    for x_lo, x_hi, label in stage_bounds:
+        ax.text((x_lo + x_hi) / 2, 103, label, ha="center", fontsize=9,
+                color=GRAY, fontstyle="italic", clip_on=False)
+    fig.tight_layout()
+    path = os.path.join(OUTPUT_DIR, "fig20_emotion_group_area.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=WHITE)
+    plt.close(fig)
+    figs["fig20"] = path
+    print(f"  [fig20] 감정 그룹별 면적 차트 저장")
+
+    # ─── fig21: 감정 그룹별 구성 변화 — 긍정 vs 부정 종료 비교 ───────────────
+    pos_ratios = {
+        "감사/만족": [15.1, 11.6, 12.0, 15.7, 15.0, 16.5, 17.8, 17.5, 25.8, 56.2],
+        "안정/중립": [36.7, 37.7, 36.8, 34.6, 32.5, 28.9, 31.9, 28.9, 30.3, 28.7],
+        "불안/걱정": [21.3, 20.1, 23.9, 21.4, 21.3, 23.9, 23.5, 24.4, 20.2,  6.4],
+        "불만/짜증": [11.8, 17.5, 13.8, 15.7, 18.1, 17.3, 12.8, 14.0, 12.8,  5.3],
+        "혼란/당황": [14.9, 13.2, 13.5, 12.6, 13.2, 13.4, 14.0, 15.2, 10.9,  3.5],
+    }
+    neg_ratios = {
+        "감사/만족": [11.8, 12.9, 10.7,  9.5, 16.7, 19.2, 15.1, 16.3, 26.6, 16.5],
+        "안정/중립": [36.6, 37.1, 38.5, 34.2, 32.7, 34.0, 35.5, 30.7, 25.2, 34.5],
+        "불안/걱정": [26.0, 13.4, 21.3, 15.8, 14.2, 18.6, 22.4, 20.5, 16.5, 22.1],
+        "불만/짜증": [11.0, 22.7, 17.2, 24.1, 21.6, 16.7, 11.8, 18.1, 15.1, 18.5],
+        "혼란/당황": [14.2, 13.9, 12.4, 16.5, 14.8, 11.5, 15.1, 14.5, 16.5,  8.4],
+    }
+    fig, (ax_pos, ax_neg) = plt.subplots(1, 2, figsize=(14, 5.5), sharey=True)
+    fig.patch.set_facecolor(WHITE)
+    for ax, ratios, title_suffix in [
+        (ax_pos, pos_ratios, "긍정 종료 (N=327, 47.7%)"),
+        (ax_neg, neg_ratios, "부정 종료 (N=96, 14.0%)"),
+    ]:
+        ax.set_facecolor("#FAFAFA")
+        bottom = np.zeros(10)
+        for gname, gcol in zip(grp_names, grp_colors_list):
+            vals = np.array(ratios[gname])
+            ax.fill_between(x_area, bottom, bottom + vals, color=gcol, alpha=0.75, label=gname)
+            mid = bottom + vals / 2
+            for xi in [0, 4, 9]:
+                if vals[xi] >= 10:
+                    ax.text(xi, mid[xi], f"{vals[xi]:.0f}%", ha="center", va="center",
+                            fontsize=7.5, fontweight="bold", color="white")
+            bottom += vals
+        ax.set_xticks(x_area)
+        ax.set_xticklabels([f"{i*10}%" for i in range(10)], fontsize=8.5)
+        ax.set_title(title_suffix, fontsize=12, fontweight="bold", color="#222222", pad=10)
+        ax.set_ylim(0, 100)
+        ax.set_xlim(-0.3, 9.3)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_color(LIGHT_GRAY)
+        ax.spines["bottom"].set_color(LIGHT_GRAY)
+    ax_pos.set_ylabel("비율 (%)", fontsize=10, color="#555555")
+    handles, labels = ax_pos.get_legend_handles_labels()
+    fig.legend(handles, labels, fontsize=9, framealpha=0.9,
+               loc="lower center", ncol=5, bbox_to_anchor=(0.5, -0.02))
+    fig.suptitle("종료 그룹별 감정 구성 변화 비교 (Stacked Area)",
+                 fontsize=14, fontweight="bold", color="#222222", y=1.02)
+    fig.text(0.5, 0.97, "※ 중립 종료(N=263, 38.3%): 종료 감성 -0.05~+0.05 구간은 별도 표시 생략",
+             ha="center", fontsize=9, color=GRAY, fontstyle="italic")
+    fig.tight_layout()
+    path = os.path.join(OUTPUT_DIR, "fig21_emotion_group_area_compare.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=WHITE)
+    plt.close(fig)
+    figs["fig21"] = path
+    print(f"  [fig21] 긍정/부정 감정 그룹 면적 비교 저장")
+
+    # ─── fig22: 감정 색상 궤적 — 전체/긍정/부정 (개별 콜 대시보드 스타일) ────
+    nn_groups = ["감사/만족", "불안/걱정", "불만/짜증", "혼란/당황"]
+    all_vals_t = [-0.069, -0.118, -0.114, -0.112, -0.103, -0.095, -0.086, -0.089, -0.038, +0.098]
+    all_doms   = ["불안/걱정"]*8 + ["감사/만족"]*2
+    pos_vals_t = [-0.077, -0.119, -0.114, -0.093, -0.103, -0.101, -0.080, -0.087, -0.024, +0.192]
+    pos_doms   = ["불안/걱정"]*8 + ["감사/만족"]*2
+    neg_vals_t = [-0.059, -0.092, -0.113, -0.147, -0.104, -0.049, -0.078, -0.111, -0.046, -0.071]
+    neg_doms   = ["불안/걱정", "불만/짜증", "불안/걱정", "불만/짜증", "불만/짜증",
+                  "감사/만족", "불안/걱정", "불안/걱정", "감사/만족", "불안/걱정"]
+
+    from matplotlib.lines import Line2D
+
+    def _plot_emotion_traj(ax, x, vals, doms, title, show_ylabel=True):
+        ax.set_facecolor("#FAFAFA")
+        ax.plot(x, vals, color="#CCCCCC", linewidth=2, zorder=3)
+        for xi, (v, d) in enumerate(zip(vals, doms)):
+            c = grp_color_map.get(d, "#999999")
+            ax.scatter(xi, v, color=c, s=120, zorder=5, edgecolors="white", linewidths=1.8)
+            offset = 0.015 if v >= 0 else -0.020
+            ax.text(xi, v + offset, f"{v:+.3f}", ha="center", fontsize=7.5,
+                    fontweight="bold", color=c)
+        for x_lo, x_hi, label in stage_bounds:
+            ax.text((x_lo + x_hi) / 2, 0.26, label, ha="center", fontsize=9,
+                    color=GRAY, fontstyle="italic")
+        ax.axhline(0, color=LIGHT_GRAY, linewidth=0.9, linestyle="--")
+        ax.set_xticks(x)
+        ax.set_xticklabels([f"{i*10}%" for i in range(10)], fontsize=8.5)
+        if show_ylabel:
+            ax.set_ylabel("Valence", fontsize=10, color="#555555")
+        ax.set_title(title, fontsize=11, fontweight="bold", color="#222222", pad=10)
+        ax.set_ylim(-0.22, 0.30)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_color(LIGHT_GRAY)
+        ax.spines["bottom"].set_color(LIGHT_GRAY)
+
+    fig, axes = plt.subplots(1, 3, figsize=(16, 5), sharey=True)
+    fig.patch.set_facecolor(WHITE)
+    _plot_emotion_traj(axes[0], x_bins, all_vals_t, all_doms, "전체 (N=686)", True)
+    _plot_emotion_traj(axes[1], x_bins, pos_vals_t, pos_doms, "긍정 종료 (N=327, 47.7%)", False)
+    _plot_emotion_traj(axes[2], x_bins, neg_vals_t, neg_doms, "부정 종료 (N=96, 14.0%)", False)
+    legend_el = [Line2D([0], [0], marker="o", color="w", markerfacecolor=grp_color_map[g],
+                        markersize=10, label=g) for g in grp_color_map]
+    fig.legend(handles=legend_el, fontsize=9, framealpha=0.9,
+               loc="lower center", ncol=5, bbox_to_anchor=(0.5, -0.04))
+    fig.suptitle("감정 그룹 색상 궤적 — 종료 유형별 비교",
+                 fontsize=14, fontweight="bold", color="#222222", y=1.02)
+    fig.text(0.5, 0.97, "※ 중립 종료(N=263, 38.3%): 종료 감성 -0.05~+0.05 구간은 별도 표시 생략",
+             ha="center", fontsize=9, color=GRAY, fontstyle="italic")
+    fig.tight_layout()
+    path = os.path.join(OUTPUT_DIR, "fig22_emotion_color_trajectory.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=WHITE)
+    plt.close(fig)
+    figs["fig22"] = path
+    print(f"  [fig22] 감정 색상 궤적 (종료 유형별) 저장")
+
+    # ─── fig23: 감정 색상 궤적 — 연령대별 ────────────────────────────────────
+    age_traj_data = {
+        "20~39세":  ([-0.078,-0.129,-0.106,-0.119,-0.116,-0.062,-0.065,-0.090,-0.013,+0.132],
+                     ["불안/걱정"]*8 + ["감사/만족"]*2),
+        "40~49세":  ([-0.072,-0.101,-0.098,-0.128,-0.127,-0.080,-0.099,-0.087,-0.040,+0.110],
+                     ["불안/걱정"]*8 + ["감사/만족"]*2),
+        "50~64세":  ([-0.056,-0.115,-0.115,-0.099,-0.079,-0.096,-0.066,-0.098,-0.037,+0.100],
+                     ["불안/걱정"]*4+["감사/만족"]+["불안/걱정"]*3+["감사/만족"]*2),
+        "65~74세":  ([-0.065,-0.125,-0.125,-0.120,-0.109,-0.107,-0.106,-0.085,-0.062,+0.055],
+                     ["불안/걱정","불만/짜증","불안/걱정","불안/걱정","불안/걱정",
+                      "불만/짜증","불안/걱정","불안/걱정","불안/걱정","감사/만족"]),
+    }
+    fig, axes = plt.subplots(1, 4, figsize=(18, 5), sharey=True)
+    fig.patch.set_facecolor(WHITE)
+    for i, (age, (vals, doms)) in enumerate(age_traj_data.items()):
+        _plot_emotion_traj(axes[i], x_bins, vals, doms, age, i == 0)
+    fig.legend(handles=legend_el, fontsize=9, framealpha=0.9,
+               loc="lower center", ncol=5, bbox_to_anchor=(0.5, -0.04))
+    fig.suptitle("감정 그룹 색상 궤적 — 연령대별 비교",
+                 fontsize=14, fontweight="bold", color="#222222", y=1.02)
+    fig.tight_layout()
+    path = os.path.join(OUTPUT_DIR, "fig23_emotion_color_trajectory_age.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=WHITE)
+    plt.close(fig)
+    figs["fig23"] = path
+    print(f"  [fig23] 감정 색상 궤적 (연령대별) 저장")
+
+    # ─── fig24: 감정 색상 궤적 — 제품군별 ────────────────────────────────────
+    prod_traj_data = {
+        "주방가전":       ([-0.074,-0.120,-0.128,-0.105,-0.089,-0.101,-0.101,-0.071,-0.039,+0.102],
+                          ["불안/걱정","불만/짜증","불안/걱정","불안/걱정","불안/걱정",
+                           "불안/걱정","불안/걱정","불안/걱정","감사/만족","감사/만족"]),
+        "생활가전":       ([-0.058,-0.129,-0.103,-0.103,-0.123,-0.082,-0.072,-0.093,-0.021,+0.096],
+                          ["불안/걱정"]*8+["감사/만족"]*2),
+        "TV/AV":          ([-0.055,-0.100,-0.080,-0.131,-0.093,-0.114,-0.078,-0.134,-0.068,+0.075],
+                          ["불안/걱정"]*8+["혼란/당황","감사/만족"]),
+        "에어컨/에어케어": ([-0.095,-0.099,-0.087,-0.125,-0.125,-0.060,-0.051,-0.129,-0.047,+0.092],
+                          ["불안/걱정","불만/짜증","불안/걱정","불안/걱정","불만/짜증",
+                           "혼란/당황","불안/걱정","혼란/당황","감사/만족","감사/만족"]),
+    }
+    fig, axes = plt.subplots(1, 4, figsize=(18, 5), sharey=True)
+    fig.patch.set_facecolor(WHITE)
+    for i, (prod, (vals, doms)) in enumerate(prod_traj_data.items()):
+        _plot_emotion_traj(axes[i], x_bins, vals, doms, prod, i == 0)
+    fig.legend(handles=legend_el, fontsize=9, framealpha=0.9,
+               loc="lower center", ncol=5, bbox_to_anchor=(0.5, -0.04))
+    fig.suptitle("감정 그룹 색상 궤적 — 제품군별 비교",
+                 fontsize=14, fontweight="bold", color="#222222", y=1.02)
+    fig.tight_layout()
+    path = os.path.join(OUTPUT_DIR, "fig24_emotion_color_trajectory_product.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=WHITE)
+    plt.close(fig)
+    figs["fig24"] = path
+    print(f"  [fig24] 감정 색상 궤적 (제품군별) 저장")
 
     print(f"\n그래프 {len(figs)}개 생성 완료 → {OUTPUT_DIR}")
     return figs
@@ -1785,8 +2002,10 @@ def build_report(figs: dict):
     _add_heading(doc, "8. 세그먼트별 감정 궤적", level=1)
 
     _add_para(doc,
-        "종료 감성을 기준으로 전체 콜을 긍정(+0.05 초과)과 부정(-0.05 미만) 그룹으로 분류하여 "
-        "단계별 감성 궤적 차이를 분석하였습니다.")
+        "종료 감성을 기준으로 전체 686건의 콜을 긍정(+0.05 초과, 327건·47.7%), "
+        "중립(-0.05~+0.05, 263건·38.3%), 부정(-0.05 미만, 96건·14.0%) 그룹으로 분류하여 "
+        "단계별 감성 궤적 차이를 분석하였습니다. "
+        "이하 분석에서는 대비가 뚜렷한 긍정·부정 그룹 간 비교를 중심으로 서술합니다.")
 
     _add_heading(doc, "8.1 종료 감정 그룹별 단계 궤적 비교", level=2)
     _add_table(doc,
@@ -1893,6 +2112,90 @@ def build_report(figs: dict):
         "짧은 발화가 50% 이상인 콜에서는 불만/짜증 비율(16.5%)이 "
         "30% 미만 콜(9.7%)의 1.7배에 달해, "
         "고객이 수동적으로 듣기만 하는 구간이 길수록 부정 감성이 누적됨을 확인합니다 (→ 9장).")
+
+    # ── 8.5 감정 그룹 색상 궤적 (개별 콜 스타일) ──
+    doc.add_paragraph()
+    _add_heading(doc, "8.5 감정 그룹 색상 궤적 (유형별 비교)", level=2)
+    _add_para(doc,
+        "앞선 궤적 분석이 감성 점수(Valence)의 평균 추이를 보여주었다면, "
+        "아래 차트는 각 구간에서 가장 두드러진 감정 그룹을 색상으로 표시하여 "
+        "상담 흐름 속 감정의 질적 전환을 시각화합니다. "
+        "초록(감사/만족), 노랑(불안/걱정), 빨강(불만/짜증), 보라(혼란/당황)로 구분됩니다.")
+    if "fig22" in figs:
+        _add_figure(doc, figs["fig22"], width_inches=6.5,
+                    caption="[그림 22] 감정 그룹 색상 궤적 — 종료 유형별 비교")
+    _add_para(doc,
+        "전체 및 긍정 종료 그룹에서는 초반~중반의 불안/걱정(노란색)이 80% 이후 감사/만족(초록)으로 "
+        "명확하게 전환됩니다. 반면 부정 종료 그룹은 불만/짜증(빨간색)이 10~40% 구간에서 "
+        "반복 출현하며, 종료까지 감사/만족으로 전환되지 못합니다.")
+    if "fig23" in figs:
+        _add_figure(doc, figs["fig23"], width_inches=6.5,
+                    caption="[그림 23] 감정 그룹 색상 궤적 — 연령대별 비교")
+    _add_para(doc,
+        "연령대별로 보면, 20~49세는 초반부터 종료까지 불안/걱정→감사/만족의 단순 전환 패턴을 보이나, "
+        "65~74세는 중간에 불만/짜증(빨간색)이 출현하여 감정 변동이 더 복잡합니다. "
+        "50~64세는 40% 구간에서 일시적으로 감사/만족이 나타나 다른 연령대와 차별화됩니다.")
+
+    _add_para(doc,
+        "65~74세의 불만/짜증 출현은 바로 아래 연령대인 50~64세와 대조하면 원인이 분명해집니다. "
+        "두 그룹은 제품 구성이 유사하고(정수기 20~21%, TV 13~15%), "
+        "불만/짜증 비율 자체의 절대적 격차는 크지 않습니다. "
+        "차이는 불안/걱정과의 역전 여부에 있습니다. "
+        "10~20% 구간(탐색 초반)에서 50~64세는 불안/걱정(19.0%)이 불만/짜증(18.4%)을 근소하게 앞서지만, "
+        "65~74세는 불만/짜증(20.8%)이 불안/걱정(17.8%)을 3.1%p 역전합니다. "
+        "이 구간은 본인확인·계약자 확인 절차가 진행되는 탐색 단계이며, "
+        "짧은 확인 응답('네 네', '예 예')에서 음성 톤이 불만으로 감지됩니다.")
+    _add_para(doc,
+        "더 큰 격차는 해결시도 구간에서 나타납니다. "
+        "50~60%에서 65~74세 21.7% vs 50~64세 17.1%(+4.6%p), "
+        "60~70%에서 17.1% vs 11.4%(+5.7%p)로, "
+        "50~60% 구간에서도 불만/짜증이 불안/걱정을 역전하여 빨간색으로 표시됩니다. "
+        "같은 제품(정수기)만 비교해도 해결시도 구간에서 65~74세 불만/짜증 비율은 27.1%로, "
+        "50~64세(15.0%)의 약 2배입니다. "
+        "이는 제품 구성의 차이가 아니라, "
+        "동일 제품의 기술적 설명을 이해하는 과정에서 65~74세가 더 큰 좌절을 겪기 때문입니다.")
+    _add_para(doc,
+        "한편 65~74세 불만/짜증의 57.3%는 짧은 발화(음성 톤만으로 판별)이며, "
+        "평소 대비 음높이(F0) 상승폭이 15.2Hz로 50~64세(10.3Hz)보다 큽니다. "
+        "고령층은 전화 통화 시 또렷하게 전달하기 위해 목소리를 크게 높여 대답하는 경향이 있으며, "
+        "이때 평소 대비 음높이 상승폭(15.2Hz)이 50~64세(10.3Hz)보다 커서 "
+        "감정 분류 모델이 이를 불만/짜증으로 해석하는 경우가 일부 존재합니다.")
+
+    if "fig24" in figs:
+        _add_figure(doc, figs["fig24"], width_inches=6.5,
+                    caption="[그림 24] 감정 그룹 색상 궤적 — 제품군별 비교")
+    _add_para(doc,
+        "에어컨/에어케어와 TV/AV에서만 불만/짜증·혼란/당황이 교차 출현하는 이유는 "
+        "주방가전·생활가전과의 대조를 통해 드러납니다. "
+        "주방가전도 구독/결제 키워드 포함 비율이 63.1%로 에어컨(61.8%)과 유사하고, "
+        "수리/설치 키워드 비율도 86.1%로 에어컨(86.8%)과 거의 같습니다. "
+        "그러나 주방가전(정수기·냉장고)은 '필터 교체', '기사 방문' 등 단일 액션으로 상담이 종결되는 반면, "
+        "에어컨/에어케어와 TV/AV는 구독료 체계·카드 변경·설치 일정·부가서비스가 중첩되어 "
+        "한 번의 안내로는 고객이 전체 상황을 파악하기 어렵습니다.")
+    _add_para(doc,
+        "에어컨/에어케어(76건)는 전 제품군 중 통화시간이 가장 길고(192초), "
+        "NPS가 가장 낮습니다(7.59). 40~50% 구간에서 불만/짜증(24.4%, 전 제품군 최고)이 폭발한 뒤, "
+        "60~70%에서 혼란/당황(16.4%), 70~80%에서 혼란/당황(21.4%, 전 제품군·전 구간 최고)으로 전환됩니다. "
+        "실제 발화를 보면 \"이게 구독료가 2만 5천 원인가 2만 3천 원 정도가 결제되는 거잖아요\", "
+        "\"날짜가 연기될 수도 있다라고 이야기를\" 등 "
+        "결제 구조와 일정 절차를 확인하는 질문형 발화가 주를 이룹니다. "
+        "65세 이상 고객 비율이 28.9%로 생활가전(22.1%)보다 높은 점도 복잡성을 가중시킵니다.")
+    _add_para(doc,
+        "TV/AV(87건, 96.6%가 TV)는 혼란/당황이 60~90% 구간에 집중됩니다 "
+        "(60~70%: 18.8%, 80~90%: 18.9%). "
+        "65세 이상 고객 비율이 32.1%로 전 제품군 최고이며, "
+        "해결시도 단계에서 리모컨 구매, 벽걸이 설치, 가상계좌 결제, 구독 서비스 등 "
+        "다양한 부가 절차가 동시에 안내되면서 혼란이 발생합니다. "
+        "실제 발화: \"리모컨을 어디 가야 사요\", \"할 능력이 없거든요\", "
+        "\"스탠드를 벽걸이로 할 순 없죠\" 등 디지털 기기 조작 자체에 대한 어려움이 드러납니다. "
+        "다만 NPS 평균이 8.36으로 전 제품군 최고이고, "
+        "80~90% 혼란/당황 발화 중 45%(9/20건)가 NPS 10점 콜에서 발생하여, "
+        "상담 결과에는 만족하나 기술 안내를 소화하는 과정의 인지적 부하가 반영된 것으로 해석됩니다.")
+    _add_para(doc,
+        "반면 생활가전(세탁기·청소기 등)은 제품 구조가 단순하고 "
+        "구독/결제 관련 콜 비율이 41.1%로 낮아, "
+        "혼란/당황이 초반(10~30%, 17~18%)에만 나타나고 이후 빠르게 감소합니다. "
+        "이는 초기 문제 파악 후 해결 방향이 명확해지기 때문입니다.")
 
     if "fig09" in figs:
         _add_figure(doc, figs["fig09"], width_inches=5.5,
